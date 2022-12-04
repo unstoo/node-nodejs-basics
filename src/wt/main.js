@@ -1,11 +1,7 @@
 import os from 'node:os';
-import {
-    Worker, isMainThread, parentPort, workerData
-} from 'node:worker_threads';
+import { Worker } from 'node:worker_threads';
 
 const coresCount = os.cpus().length;
-
-
 
 const performCalculations = async () => {
     const workerPromises = [];
@@ -15,17 +11,16 @@ const performCalculations = async () => {
             const worker = new Worker('./src/wt/worker.js', {
                 workerData: 10 + index,
             });
-            worker.on('message', res => {
-                resolve({ status: 'resolved', data: res });
-            });
-            worker.on('error', res => {
-                reject({ status: 'error', data: null })
-            });
+            worker.on('message', res => resolve(res));
+            worker.on('error', res => reject());
         });
         workerPromises.push(p);
     };
 
-    const results = await Promise.all(workerPromises);
+    const results = (await Promise.allSettled(workerPromises))
+        .map(res => res.status === 'fulfilled' ?
+            { status: 'resolved', data: res.value } : { status: 'error', data: null });
+
     console.log(results)
 };
 
